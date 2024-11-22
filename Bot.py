@@ -1,12 +1,17 @@
 from flask import Flask, request, jsonify
 import google.generativeai as ai
 import re
+import os
 
 # Initialisation de Flask
 app = Flask(__name__)
 
-# Clé API
-API_KEY = 'AIzaSyANjEosVPe5kW5YmQX274353Zd0VGo1ZvY'
+# Clé API (vous devez définir la clé API comme une variable d'environnement sur Render)
+API_KEY = os.getenv('API_KEY')
+
+# Vérifier si la clé API est disponible
+if not API_KEY:
+    raise EnvironmentError("La clé API n'est pas définie. Assurez-vous de définir la variable d'environnement 'API_KEY'.")
 
 # Configuration de l'API
 ai.configure(api_key=API_KEY)
@@ -15,18 +20,15 @@ ai.configure(api_key=API_KEY)
 model = ai.GenerativeModel('gemini-pro')
 chat = model.start_chat()
 
-
 def generate_image_description(location):
-    return f"Image of {location}. This might include landmarks, popular restaurants, or cultural spots."
-
+    return f"Image de {location}. Cela peut inclure des monuments, des restaurants populaires ou des lieux culturels."
 
 def make_links_clickable(text):
     """
-    Détecte les URL dans le texte et les transforme en liens HTML.
+    Transforme les URL dans le texte en liens HTML.
     """
     url_pattern = r'(https?://[^\s]+)'
     return re.sub(url_pattern, r'<a href="\1" target="_blank">\1</a>', text)
-
 
 @app.route('/chat', methods=['POST'])
 def chat_with_bot():
@@ -47,7 +49,7 @@ def chat_with_bot():
             # Extraire le lieu
             location = user_message.split("à")[-1].strip() if "à" in user_message else "destination"
 
-            # Ajouter des images
+            # Ajouter une description d'image
             image_description = generate_image_description(location)
             bot_response += f"\n\n{image_description}"
 
@@ -60,7 +62,7 @@ def chat_with_bot():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-
-# Point de départ du serveur
+# Démarrage de l'application Flask
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=10000)
+    port = int(os.environ.get('PORT', 5000))  # Utilise le port défini par Render, ou 5000 par défaut
+    app.run(host='0.0.0.0', port=port)
